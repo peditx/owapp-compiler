@@ -1,4 +1,4 @@
-name: Build app for OpenWrt
+name: Build OpenWrt Package
 
 on:
   push:
@@ -8,55 +8,52 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    # Step 1: Checkout the code
+    
+    # Step 1: Checkout the repository
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    # Step 2: Set up Python
-    - name: Set up Python 3
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-
-    # Step 3: Install dependencies (yq, python packages)
-    - name: Install dependencies
+    
+    # Step 2: Set up dependencies
+    - name: Set up dependencies
       run: |
         sudo apt update
-        sudo apt install -y curl python3-pip jq
-        python3 -m pip install --upgrade pip
+        sudo apt install -y python3-pip curl
         pip install pyyaml
+        curl -sL https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -o /usr/local/bin/yq
+        chmod +x /usr/local/bin/yq
 
-        # Install yq
-        YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
-
-        # Check if the URL is correct
-        if [ -z "$YQ_URL" ]; then
-          echo "Error: yq download URL not found"
-          exit 1
-        fi
-
-        # Download yq and install it
-        curl -LO "$YQ_URL"
-        sudo chmod +x yq_linux_amd64
-        sudo mv yq_linux_amd64 /usr/local/bin/yq
-
-    # Step 4: Create .config from config.yaml
-    - name: Create .config from config.yaml
+    # Step 3: Read config.yaml and create .config
+    - name: Generate .config from config.yaml
       run: |
-        mkdir -p openwrt
-        python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
+        python3 - <<EOF
+        import yaml
+        import os
 
-    # Step 5: Build the package
+        # Load the YAML configuration
+        with open("config.yaml", "r") as file:
+            config = yaml.safe_load(file)
+
+        # Prepare the config path
+        config_path = os.path.join(os.getcwd(), "openwrt", ".config")
+
+        # Open the .config file to write
+        with open(config_path, 'w') as config_file:
+            for package in config.get("packages", []):
+                config_file.write(f"CONFIG_PACKAGE_{package['name']}=y\n")
+
+        EOF
+
+    # Step 4: Build the package
     - name: Build package
       run: |
         cd openwrt
+        make defconfig
         make package/${PACKAGE_NAME}/compile V=s
 
-    # Step 6: Upload the generated ipk as artifact
-    - name: Upload ipk as artifact
+    # Step 5: Upload the resulting .ipk file
+    - name: Upload .ipk package
       uses: actions/upload-artifact@v3
       with:
-        name: ipk-artifact
+        name: ipk-package
         path: openwrt/bin/packages/*/*.ipk
