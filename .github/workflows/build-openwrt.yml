@@ -45,6 +45,7 @@ jobs:
     # Step 4: Create .config from config.yaml
     - name: Create .config from config.yaml
       run: |
+        mkdir -p openwrt
         python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
 
     # Step 5: Build the package
