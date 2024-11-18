@@ -34,20 +34,28 @@ jobs:
           git clone https://github.com/peditx/luci-theme-peditx package/luci-theme-peditx
           echo "Package added successfully"
 
-      # Step 4: Set the configuration for OpenWrt
+      # Step 4: Ensure .config is created correctly
+      - name: Ensure .config exists and is correct
+        run: |
+          cd openwrt
+          if [ ! -f .config ]; then
+            make defconfig
+          fi
+          
+      # Step 5: Set OpenWrt configuration
       - name: Set OpenWrt configuration
         run: |
           cd openwrt
+          # Make sure to replace the config file with the one from the repository
           cp ${{ github.workspace }}/config.yaml .config
-          make defconfig
 
-      # Step 5: Build the package
+      # Step 6: Build the package
       - name: Build package
         run: |
           cd openwrt
           make package/luci-theme-peditx/compile V=s
 
-      # Step 6: Upload the compiled package
+      # Step 7: Upload the compiled package
       - name: Upload compiled package
         uses: actions/upload-artifact@v3
         with:
