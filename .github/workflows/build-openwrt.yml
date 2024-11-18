@@ -27,7 +27,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install luci
 
-      # Step 3: Clone custom repository and add the package
+      # Step 3: Clone custom repository and add package
       - name: Clone custom repository and add package
         run: |
           cd openwrt
@@ -42,7 +42,7 @@ jobs:
           cd openwrt
           if [ ! -f .config ]; then
             echo "Creating .config from config.yaml"
-            python3 generate_config_from_yaml.py ${{ github.workspace }}/config.yaml .config
+            python3 ${GITHUB_WORKSPACE}/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml .config
           fi
 
       # Step 5: Build packages dynamically from config.yaml
