@@ -1,12 +1,6 @@
 name: Build OpenWrt Package
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -25,12 +19,13 @@ jobs:
           sudo apt-get install -y build-essential libncurses5-dev \
             gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip
 
-      # Step 3: Read the .config file using an alternative action
+      # Step 3: Read the .config file using a valid action
       - name: Read Config File
         id: config
-        uses: artifact-actions/read-yaml@v2
+        uses: lannonbr/parse-yaml@v1
         with:
-          path: .config
+          yaml-file: .config
+          key-separator: .
 
       # Step 4: Download and prepare OpenWrt SDK for each architecture
       - name: Download and Prepare OpenWrt SDK
