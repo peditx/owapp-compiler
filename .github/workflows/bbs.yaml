@@ -51,13 +51,23 @@ jobs:
         cd openwrt-project
         for ARCH in ${ARCHITECTURES//,/ }
         do
+          # Set the defconfig for the architecture
           make defconfig
           sed -i "s/CONFIG_TARGET_[A-Za-z0-9_-]*_OPENWRT=y/CONFIG_TARGET_${ARCH}_OPENWRT=y/" .config
+          
+          # Build the image for the specified architecture
           make -j$(nproc) V=s
 
-          # Find the generated .ipk files
+          # Check if .ipk files were created and list them
           IPK_FILES=$(find bin/packages/$ARCH/ -name "*.ipk")
           
+          if [ -z "$IPK_FILES" ]; then
+            echo "No .ipk files were found for $ARCH."
+          else
+            echo "Found .ipk files for $ARCH:"
+            echo "$IPK_FILES"
+          fi
+
           # Upload the files to GitHub
           for FILE in $IPK_FILES
           do
