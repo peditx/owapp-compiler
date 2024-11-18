@@ -15,6 +15,6 @@ def generate_config(yaml_file, config_file):
             else:
                 f.write(f"CONFIG_{key}_{value.upper()}={value}\n")
 
-yaml_file = 'path_to_your_config.yaml'
-config_file = 'path_to_your_config_file.config'
+yaml_file = 'config.yaml'
+config_file = '/home/runner/work/owapp-compiler/owapp-compiler/openwrt/.config'
 generate_config(yaml_file, config_file)
