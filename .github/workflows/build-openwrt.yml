@@ -17,8 +17,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev \
-            gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip \
-            yq
+            gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip
+          # Install yq manually
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
 
       # Step 3: Read Config File and Extract Values
       - name: Read Config File
