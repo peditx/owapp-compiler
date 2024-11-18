@@ -6,7 +6,7 @@ on:
       project_url:
         description: 'URL of the OpenWrt theme repository'
         required: true
-        default: 'https://github.com/peditx/luci-theme-peditx'
+        default: 'https://github.com/example/openwrt-theme'
       architectures:
         description: 'Comma-separated list of architectures to build'
         required: true
@@ -37,24 +37,17 @@ jobs:
       - name: Add custom theme repository
         run: |
           cd openwrt-project
-          echo "src-git luci-theme-peditx ${{ github.event.inputs.project_url }}" >> feeds.conf.default
-          ./scripts/feeds update luci-theme-peditx
-          ./scripts/feeds install luci-theme-peditx
-
-      - name: Configure OpenWrt build
-        run: |
-          cd openwrt-project
-          # Generate default config file for target architectures
-          make defconfig
-          # Alternatively, you can use make menuconfig to customize
-          # make menuconfig
+          echo "src-git luci-theme ${{ github.event.inputs.project_url }}" >> feeds.conf.default
+          ./scripts/feeds update luci-theme
+          ./scripts/feeds install luci-theme
 
       - name: Build OpenWrt for specified architectures
         run: |
           cd openwrt-project
+          make defconfig
           IFS=',' read -r -a ARCH_ARRAY <<< "${{ github.event.inputs.architectures }}"
           for ARCH in "${ARCH_ARRAY[@]}"; do
-            make -j$(nproc) V=s target=$ARCH
+            make -j$(nproc) V=s
           done
 
       - name: Zip .ipk files
