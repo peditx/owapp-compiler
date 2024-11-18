@@ -27,19 +27,20 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install luci
 
-      # Step 3: Clone your custom repository and add the package to OpenWrt
+      # Step 3: Clone your custom repository and add the package
       - name: Clone custom repository and add package
         run: |
           cd openwrt
           git clone https://github.com/peditx/luci-theme-peditx package/luci-theme-peditx
           echo "Package added successfully"
 
-      # Step 4: Configure OpenWrt build system with config.yaml
-      - name: Configure OpenWrt build
+      # Step 4: Set the configuration for OpenWrt
+      - name: Set OpenWrt configuration
         run: |
           cd openwrt
           cp ${{ github.workspace }}/config.yaml .config
           make defconfig
+          make menuconfig  # Open configuration menu to ensure all settings are correct
 
       # Step 5: Build the package
       - name: Build package
@@ -47,7 +48,7 @@ jobs:
           cd openwrt
           make package/luci-theme-peditx/compile V=s
 
-      # Step 6: Upload the compiled package as an artifact
+      # Step 6: Upload the compiled package
       - name: Upload compiled package
         uses: actions/upload-artifact@v3
         with:
