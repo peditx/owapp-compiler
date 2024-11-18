@@ -1,4 +1,4 @@
-name: Build OpenWrt
+name: Build OpenWrt Package
 
 on:
   workflow_dispatch:
@@ -15,70 +15,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Python for generating config
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
+      - name: Setup OpenWrt environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc g++ libc6-dev libncurses5-dev libssl-dev libz-dev
+          sudo apt-get install -y subversion git gawk wget diffstat unzip curl python3 python3-distutils
+          sudo apt-get install -y rsync file liblzma-dev
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential gcc g++ python3 python3-pip python3-setuptools
-        pip install pyyaml
+      - name: Clone OpenWrt repository
+        run: |
+          git clone ${{ github.event.inputs.project_url }} openwrt-project
+          cd openwrt-project
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
-    - name: Ensure .config file exists
-      run: |
-        mkdir -p openwrt
-        touch openwrt/.config || echo ".config file already exists"
-
-    - name: Generate OpenWrt config file
-      run: |
-        python3 scripts/generate_config_from_yaml.py config.yaml openwrt/.config
-
-    - name: Set up OpenWrt environment
-      run: |
-        git clone ${{ github.event.inputs.project_url }} openwrt-project
-        cd openwrt-project
-        git submodule update --init --recursive
-
-    - name: Build for specified architectures
-      run: |
-        cd openwrt-project
-        for ARCH in ${ARCHITECTURES//,/ }
-        do
-          # Set the defconfig for the architecture
+      - name: Configure OpenWrt build
+        run: |
+          cd openwrt-project
+          cp /home/runner/work/owapp-compiler/owapp-compiler/config.yaml .config
           make defconfig
-          sed -i "s/CONFIG_TARGET_[A-Za-z0-9_-]*_OPENWRT=y/CONFIG_TARGET_${ARCH}_OPENWRT=y/" .config
-          
-          # Build the image for the specified architecture
-          make -j$(nproc) V=s
+          make menuconfig # اینجا معماری‌ها باید انتخاب شوند
 
-          # Check if .ipk files were created and list them
-          IPK_FILES=$(find bin/packages/$ARCH/ -name "*.ipk")
-          
-          if [ -z "$IPK_FILES" ]; then
-            echo "No .ipk files were found for $ARCH."
+      - name: Build OpenWrt for specified architectures
+        run: |
+          cd openwrt-project
+          IFS=',' read -r -a ARCH_ARRAY <<< "${{ github.event.inputs.architectures }}"
+          for ARCH in "${ARCH_ARRAY[@]}"; do
+            make -j$(nproc) V=s target=$ARCH
+          done
+
+      - name: Zip .ipk files
+        run: |
+          cd openwrt-project
+          IPK_FILES=$(find bin/packages/*/*.ipk)
+          if [ ! -z "$IPK_FILES" ]; then
+            zip -r openwrt-ipks.zip $IPK_FILES
           else
-            echo "Found .ipk files for $ARCH:"
-            echo "$IPK_FILES"
+            echo "No .ipk files found."
+            exit 1
           fi
 
-          # Zip the .ipk files into a single archive
-          ZIP_FILE="openwrt-ipks-${ARCH}.zip"
-          zip $ZIP_FILE $IPK_FILES
-
-          # Upload the zip file as artifact
-          echo "Uploading $ZIP_FILE"
-          curl -X POST -F "file=@$ZIP_FILE" https://example.com/upload
-        done
-
-    - name: Upload IPK files as artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: openwrt-ipk
-        path: openwrt-project/bin/packages/*/*.ipk
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: openwrt-ipks
+          path: openwrt-project/openwrt-ipks.zip
