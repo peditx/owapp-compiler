@@ -1,73 +1,49 @@
-name: Build OpenWrt Package
+name: Build app for OpenWrt
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the source code
-      - name: Checkout Code
+      - name: Check out code
         uses: actions/checkout@v3
 
-      # Step 2: Install Required Tools
-      - name: Install Required Tools
+      - name: Set up OpenWrt build environment
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5-dev \
-            gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      # Step 3: Read Config File and Extract Values
-      - name: Read Config File
-        id: config
-        run: |
-          export REPOSITORY=$(yq '.repository' config.yaml)
-          export PACKAGE_NAME=$(yq '.package_name' config.yaml)
-          export ARCHITECTURES=$(yq '.architectures | join(",")' config.yaml)
-          echo "REPOSITORY=$REPOSITORY" >> $GITHUB_ENV
-          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
-          echo "ARCHITECTURES=$ARCHITECTURES" >> $GITHUB_ENV
-
-      # Step 4: Clone the Package Repository
-      - name: Clone Package Repository
-        run: |
-          git clone "${{ env.REPOSITORY }}" ./package-src
-
-      # Step 5: Setup OpenWrt Build Environment
-      - name: Setup OpenWrt Build Environment
-        run: |
-          # Clone OpenWrt source
+          sudo apt update
+          sudo apt install -y build-essential libncurses5-dev zlib1g-dev gawk flex git wget
           git clone https://github.com/openwrt/openwrt.git
           cd openwrt
           ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          ./scripts/feeds install luci
 
-          # Add the package to OpenWrt
-          ln -s ../package-src ${PACKAGE_NAME}
-
-          # Use default config to avoid menuconfig
-          make defconfig
-
-      # Step 6: Build the Specific Package using the dynamic PACKAGE_NAME from config.yaml
-      - name: Build the Specific Package
+      - name: Clone custom repository and add package
         run: |
           cd openwrt
-          make package/${PACKAGE_NAME}/compile V=s
+          git clone ${{ secrets.REPOSITORY }} package/luci-theme-peditx
+          echo "Package added successfully"
 
-      # Step 7: Create Zip File with IPK Files
-      - name: Create Zip File with IPK Files
+      - name: Configure OpenWrt build
         run: |
-          mkdir -p build_outputs
-          cp ./openwrt/bin/packages/*/*/*.ipk build_outputs/
-          zip -r package_builds.zip build_outputs
+          cd openwrt
+          cp ${{ github.workspace }}/config.yaml .config
+          make defconfig
 
-      # Step 8: Upload Artifact
-      - name: Upload Artifact
+      - name: Build package
+        run: |
+          cd openwrt
+          make package/$PACKAGE_NAME/compile V=s
+
+      - name: Upload compiled package
         uses: actions/upload-artifact@v3
         with:
-          name: OpenWrt-Packages
-          path: package_builds.zip
+          name: ${{ secrets.PACKAGE_NAME }}.ipk
+          path: openwrt/bin/targets/*/*/packages/*.ipk
