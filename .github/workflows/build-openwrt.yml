@@ -14,7 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Step 2: Set up Python (only once)
+    # Step 2: Set up Python
     - name: Set up Python 3
       uses: actions/setup-python@v2
       with:
@@ -30,30 +30,34 @@ jobs:
 
         # Install yq
         YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
+
+        # Check if the URL is correct
+        if [ -z "$YQ_URL" ]; then
+          echo "Error: yq download URL not found"
+          exit 1
+        fi
+
+        # Download yq and install it
         curl -LO "$YQ_URL"
         sudo chmod +x yq_linux_amd64
         sudo mv yq_linux_amd64 /usr/local/bin/yq
 
-    # Step 4: Clone repository and prepare .config
-    - name: Clone repository and prepare .config
+    # Step 4: Create .config from config.yaml
+    - name: Create .config from config.yaml
       run: |
-        REPO_URL=$(yq eval '.repository_url' ${GITHUB_WORKSPACE}/config.yaml)
-        git clone $REPO_URL openwrt
-        
-        # Prepare .config for each architecture
-        ARCHITECTURES=$(yq eval '.architectures' ${GITHUB_WORKSPACE}/config.yaml)
-        for ARCH in $(echo $ARCHITECTURES | jq -r '.[]'); do
-          echo "Building for architecture: $ARCH"
-          # Update .config with the selected architecture
-          echo "CONFIG_TARGET_$ARCH=y" >> openwrt/.config
-          
-          # Create the .config file based on config.yaml
-          python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
+        mkdir -p openwrt
+        python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
 
-          # Step 5: Build the package for this architecture
-          cd openwrt
-          make package/${PACKAGE_NAME}/compile V=s
-          cd ..
+    # Step 5: Build the package
+    - name: Build package for all architectures
+      run: |
+        cd openwrt
+        # Read the package name from the config.yaml
+        PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
+        # Get the architectures list from the config.yaml
+        ARCHITECTURES=$(yq eval '.architectures | join(" ")' ${GITHUB_WORKSPACE}/config.yaml)
+        for ARCH in $ARCHITECTURES; do
+          make package/${PACKAGE_NAME}/compile V=s ARCH=$ARCH
         done
 
     # Step 6: Upload the generated ipk as artifact
@@ -61,4 +65,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ipk-artifact
-        path: openwrt/bin/packages/*/*.ipk
+        path: $(find openwrt/bin/packages/ -name "*.ipk")
+        if-no-files-found: warn
+        include-hidden-files: false
