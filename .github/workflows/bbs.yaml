@@ -34,16 +34,16 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Clone theme repository
+      - name: Clone theme repository with authentication
         run: |
           cd openwrt-project
+          git config --global url."https://${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
           git clone ${{ github.event.inputs.theme_url }} package/luci-theme-peditx
 
       - name: Configure OpenWrt build
         run: |
           cd openwrt-project
           make defconfig
-          # Add theme package to OpenWrt build system
           echo "CONFIG_PACKAGE_luci-theme-peditx=y" >> .config
 
       - name: Build OpenWrt for specified architectures
