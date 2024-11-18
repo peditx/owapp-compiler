@@ -1,0 +1,11 @@
+repository_url: "https://github.com/your-username/your-repository"
+architectures:
+  - "armv6"
+  - "armv7"
+  - "mipsel"
+  - "x86_64"
+  - "aarch64"
+packages:
+  - package_name: luci-theme-peditx
+  - package_name: luci-app-someapp
+  - package_name: luci-theme-other
