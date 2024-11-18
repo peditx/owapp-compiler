@@ -1,6 +1,10 @@
-repository: https://github.com/peditx/luci-theme-peditx
-package_name: luci-theme-peditx
+repository_url: "https://github.com/peditx/luci-theme-peditx"
 architectures:
-  - x86_64
-  - arm_cortex-a7
-  - mips_24kc
+  - "armv6"
+  - "armv7"
+  - "mipsel"
+  - "x86_64"
+  - "aarch64"
+packages:
+  - package_name: luci-theme-peditx
+
