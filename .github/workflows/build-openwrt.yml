@@ -14,7 +14,8 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Step 2: Set up Python
+    # Step 2: Set up Python (only once)
+    - name: Set up Python 3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
