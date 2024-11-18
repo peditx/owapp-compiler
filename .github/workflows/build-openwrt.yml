@@ -1,21 +1,24 @@
 name: Build app for OpenWrt
 
 on:
-  workflow_dispatch:  # شروع دستی
+  workflow_dispatch:  # برای استارت دستی
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout the code
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    # Step 2: Set up Python
     - name: Set up Python 3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
 
+    # Step 3: Install dependencies
     - name: Install dependencies
       run: |
         sudo apt update
@@ -25,23 +28,27 @@ jobs:
 
         # Install yq
         YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
+
         curl -LO "$YQ_URL"
         sudo chmod +x yq_linux_amd64
         sudo mv yq_linux_amd64 /usr/local/bin/yq
 
+    # Step 4: Create .config from config.yaml
     - name: Create .config from config.yaml
       run: |
-        mkdir -p openwrt
-        python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
+        python3 scripts/generate_config_from_yaml.py /home/runner/work/owapp-compiler/owapp-compiler/config.yaml /home/runner/work/owapp-compiler/owapp-compiler/openwrt/.config
 
+    # Step 5: Build the package for all architectures
     - name: Build package
       run: |
         cd openwrt
-        PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
-        make package/${PACKAGE_NAME}/compile V=s
+        make package/luci-theme-peditx/compile V=s
 
+    # Step 6: Upload the generated ipk as artifact
     - name: Upload ipk as artifact
       uses: actions/upload-artifact@v3
       with:
         name: ipk-artifact
         path: openwrt/bin/packages/*/*.ipk
+        if-no-files-found: warn
+        include-hidden-files: false
