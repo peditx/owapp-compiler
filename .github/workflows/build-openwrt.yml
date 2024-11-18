@@ -24,9 +24,16 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y yq
+        sudo apt install -y curl python3-pip
         python3 -m pip install --upgrade pip
         pip install pyyaml
+
+        # Install yq
+        curl -s https://api.github.com/repos/mikefarah/yq/releases/latest \
+        | jq -r '.assets[] | select(.name | test("yq_.*_linux_amd64")) | .browser_download_url' \
+        | xargs curl -LO
+        sudo chmod +x yq_*.linux.amd64
+        sudo mv yq_*.linux.amd64 /usr/local/bin/yq
 
     # Step 4: Create .config from config.yaml
     - name: Create .config from config.yaml
