@@ -1,21 +1,20 @@
 import yaml
+import sys
 
 def generate_config(yaml_file, config_file):
-    # خواندن داده‌ها از فایل YAML
     with open(yaml_file, 'r') as f:
         data = yaml.safe_load(f)
 
-    # نوشتن داده‌ها به فایل .config
+    # ایجاد فایل پیکربندی OpenWrt .config
     with open(config_file, 'w') as f:
         for key, value in data.items():
-            if isinstance(value, list):  # اگر مقدار یک لیست باشد
+            if isinstance(value, list):
                 for item in value:
                     f.write(f"CONFIG_{key}_{item.upper()}={item}\n")
             else:
                 f.write(f"CONFIG_{key}_{value.upper()}={value}\n")
 
-# مسیر فایل‌ها را اصلاح کنید
-yaml_file = "/home/runner/work/owapp-compiler/owapp-compiler/config.yaml"
-config_file = "/home/runner/work/owapp-compiler/owapp-compiler/openwrt/.config"
-
-generate_config(yaml_file, config_file)
+if __name__ == "__main__":
+    yaml_file = sys.argv[1]
+    config_file = sys.argv[2]
+    generate_config(yaml_file, config_file)
