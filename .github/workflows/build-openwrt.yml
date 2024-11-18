@@ -29,19 +29,18 @@ jobs:
         pip install pyyaml
 
         # Install yq
-        LATEST_YQ_URL=$(curl -s https://api.github.com/repos/mikefarah/yq/releases/latest \
-        | jq -r '.assets[] | select(.name | test("yq_.*_linux_amd64")) | .browser_download_url')
+        YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
 
-        # Check if the URL is extracted correctly
-        if [ -z "$LATEST_YQ_URL" ]; then
+        # Check if the URL is correct
+        if [ -z "$YQ_URL" ]; then
           echo "Error: yq download URL not found"
           exit 1
         fi
 
         # Download yq and install it
-        curl -LO "$LATEST_YQ_URL"
-        sudo chmod +x yq_*.linux.amd64
-        sudo mv yq_*.linux.amd64 /usr/local/bin/yq
+        curl -LO "$YQ_URL"
+        sudo chmod +x yq_linux_amd64
+        sudo mv yq_linux_amd64 /usr/local/bin/yq
 
     # Step 4: Create .config from config.yaml
     - name: Create .config from config.yaml
