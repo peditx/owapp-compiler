@@ -1,0 +1,68 @@
+name: Build OpenWrt
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_url:
+        description: 'URL of the OpenWrt theme repository'
+        required: true
+        default: 'https://github.com/peditx/luci-theme-peditx'
+      architectures:
+        description: 'Comma-separated list of architectures to build'
+        required: true
+        default: 'x86_64,armv7,mipsel'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python for generating config
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential gcc g++ python3 python3-pip python3-setuptools
+        pip install pyyaml
+
+    - name: Generate OpenWrt config file
+      run: |
+        python3 scripts/generate_config_from_yaml.py config.yaml openwrt/.config
+
+    - name: Set up OpenWrt environment
+      run: |
+        git clone ${{ github.event.inputs.project_url }} openwrt-project
+        cd openwrt-project
+        git submodule update --init --recursive
+
+    - name: Build for specified architectures
+      run: |
+        cd openwrt-project
+        for ARCH in ${ARCHITECTURES//,/ }
+        do
+          make defconfig
+          sed -i "s/CONFIG_TARGET_[A-Za-z0-9_-]*_OPENWRT=y/CONFIG_TARGET_${ARCH}_OPENWRT=y/" .config
+          make -j$(nproc) V=s
+
+          # Find the generated .ipk files
+          IPK_FILES=$(find bin/packages/$ARCH/ -name "*.ipk")
+          
+          # Upload the files to GitHub
+          for FILE in $IPK_FILES
+          do
+            echo "Uploading $FILE"
+            curl -X POST -F "file=@$FILE" https://example.com/upload
+          done
+        done
+
+    - name: Upload IPK files as artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: openwrt-ipk
+        path: openwrt-project/bin/packages/*/*.ipk
