@@ -1,4 +1,4 @@
-name: Build app for OpenWrt
+name: Build OpenWrt Package
 
 on:
   workflow_dispatch:
@@ -32,13 +32,6 @@ jobs:
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
           echo "ARCHITECTURES=$ARCHITECTURES" >> $GITHUB_ENV
 
-      # Debug step for confirmation
-      - name: Debug Config Values
-        run: |
-          echo "Repository: ${{ env.REPOSITORY }}"
-          echo "Package Name: ${{ env.PACKAGE_NAME }}"
-          echo "Architectures: ${{ env.ARCHITECTURES }}"
-
       # Step 4: Clone the Package Repository
       - name: Clone Package Repository
         run: |
@@ -54,29 +47,22 @@ jobs:
           ./scripts/feeds install -a
 
           # Add the package to OpenWrt
-          ln -s ../package-src luci-theme-peditx
-          
+          ln -s ../package-src ${PACKAGE_NAME}
+
           # Use default config to avoid menuconfig
           make defconfig
 
-      # Step 6: Build Packages
-      - name: Build Packages
+      # Step 6: Build the Specific Package using the dynamic PACKAGE_NAME from config.yaml
+      - name: Build the Specific Package
         run: |
           cd openwrt
-          for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
-            echo "Building for $ARCH..."
-            make target=$ARCH
-          done
+          make package/${PACKAGE_NAME}/compile V=s
 
       # Step 7: Create Zip File with IPK Files
       - name: Create Zip File with IPK Files
         run: |
           mkdir -p build_outputs
-          for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
-            mkdir -p build_outputs/$ARCH
-            # Copy the .ipk files generated during the build
-            cp ./openwrt/bin/packages/*/$ARCH/*.ipk build_outputs/$ARCH/
-          done
+          cp ./openwrt/bin/packages/*/*/*.ipk build_outputs/
           zip -r package_builds.zip build_outputs
 
       # Step 8: Upload Artifact
