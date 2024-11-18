@@ -4,60 +4,44 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the repository
-      - name: Check out code
-        uses: actions/checkout@v3
+    # Step 1: Checkout the code
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      # Step 2: Set up OpenWrt build environment
-      - name: Set up OpenWrt build environment
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential libncurses5-dev zlib1g-dev gawk flex git wget
-          git clone https://github.com/openwrt/openwrt.git
-          cd openwrt
-          ./scripts/feeds update -a
-          ./scripts/feeds install luci
+    # Step 2: Set up Python
+    - name: Set up Python 3
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-      # Step 3: Clone custom repository and add package
-      - name: Clone custom repository and add package
-        run: |
-          cd openwrt
-          # Loop over repositories in config.yaml and clone them dynamically
-          for repo in $(yq eval '.repositories[]' ${GITHUB_WORKSPACE}/config.yaml); do
-            git clone $repo package/$(basename $repo)
-          done
+    # Step 3: Install dependencies (yq, python packages)
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y yq
+        python3 -m pip install --upgrade pip
+        pip install pyyaml
 
-      # Step 4: Generate .config from config.yaml dynamically
-      - name: Generate .config from config.yaml
-        run: |
-          cd openwrt
-          if [ ! -f .config ]; then
-            echo "Creating .config from config.yaml"
-            python3 ${GITHUB_WORKSPACE}/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml .config
-          fi
+    # Step 4: Create .config from config.yaml
+    - name: Create .config from config.yaml
+      run: |
+        python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
 
-      # Step 5: Build packages dynamically from config.yaml
-      - name: Build package
-        run: |
-          cd openwrt
-          # Loop over package names in config.yaml and build them dynamically
-          for package in $(yq eval '.packages[]' ${GITHUB_WORKSPACE}/config.yaml); do
-            echo "Building $package..."
-            make package/$package/compile V=s
-          done
+    # Step 5: Build the package
+    - name: Build package
+      run: |
+        cd openwrt
+        make package/${PACKAGE_NAME}/compile V=s
 
-      # Step 6: Upload the compiled packages
-      - name: Upload compiled package
-        uses: actions/upload-artifact@v3
-        with:
-          name: compiled-packages
-          path: openwrt/bin/targets/*/*/packages/*.ipk
+    # Step 6: Upload the generated ipk as artifact
+    - name: Upload ipk as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ipk-artifact
+        path: openwrt/bin/packages/*/*.ipk
