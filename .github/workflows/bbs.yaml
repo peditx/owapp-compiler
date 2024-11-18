@@ -1,4 +1,4 @@
-name: Build OpenWrt Package
+name: Build OpenWrt Theme Package
 
 on:
   workflow_dispatch:
@@ -30,15 +30,17 @@ jobs:
       - name: Clone OpenWrt repository
         run: |
           git clone https://github.com/openwrt/openwrt.git openwrt-project
+
+      - name: Clone theme repository
+        run: |
+          cd openwrt-project
+          git clone ${{ github.event.inputs.theme_url }} package/luci-theme-peditx
+
+      - name: Update and install feeds
+        run: |
           cd openwrt-project
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-
-      - name: Clone theme repository with authentication
-        run: |
-          cd openwrt-project
-          git config --global url."https://${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
-          git clone ${{ github.event.inputs.theme_url }} package/luci-theme-peditx
 
       - name: Configure OpenWrt build
         run: |
@@ -46,27 +48,26 @@ jobs:
           make defconfig
           echo "CONFIG_PACKAGE_luci-theme-peditx=y" >> .config
 
-      - name: Build OpenWrt for specified architectures
+      - name: Build theme package only
         run: |
           cd openwrt-project
-          IFS=',' read -r -a ARCH_ARRAY <<< "${{ github.event.inputs.architectures }}"
-          for ARCH in "${ARCH_ARRAY[@]}"; do
-            make -j$(nproc) V=s
-          done
+          make package/luci-theme-peditx/compile
 
-      - name: Zip .ipk files
+      - name: Find and Zip all .ipk files for luci-theme-peditx
         run: |
           cd openwrt-project
-          IPK_FILES=$(find bin/packages/*/*.ipk)
+          # Find all .ipk files related to luci-theme-peditx
+          IPK_FILES=$(find bin/packages/*/luci-theme-peditx*.ipk)
           if [ ! -z "$IPK_FILES" ]; then
-            zip -r openwrt-ipks.zip $IPK_FILES
+            # Zip all the .ipk files
+            zip -r openwrt-luci-theme-peditx.ipk.zip $IPK_FILES
           else
-            echo "No .ipk files found."
+            echo "No .ipk files found for luci-theme-peditx."
             exit 1
           fi
 
-      - name: Upload artifacts
+      - name: Upload the theme .ipk artifact
         uses: actions/upload-artifact@v3
         with:
-          name: openwrt-ipks
-          path: openwrt-project/openwrt-ipks.zip
+          name: openwrt-luci-theme-peditx
+          path: openwrt-project/openwrt-luci-theme-peditx.ipk.zip
