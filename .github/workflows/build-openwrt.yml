@@ -52,12 +52,12 @@ jobs:
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          
+
           # Add the package to OpenWrt
           ln -s ../package-src luci-theme-peditx
           
-          # Run make menuconfig to select the package
-          make menuconfig
+          # Use default config to avoid menuconfig
+          make defconfig
 
       # Step 6: Build Packages
       - name: Build Packages
