@@ -54,6 +54,14 @@ jobs:
         cd openwrt
         # Ensure PACKAGE_NAME is set in config.yaml
         PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
+
+        # Check if the package exists
+        if [ ! -d "package/${PACKAGE_NAME}" ]; then
+          echo "Error: Package ${PACKAGE_NAME} not found"
+          exit 1
+        fi
+
+        # Build the package
         make package/${PACKAGE_NAME}/compile V=s
 
     # Step 6: Upload the generated ipk as artifact
