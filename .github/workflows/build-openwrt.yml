@@ -28,9 +28,9 @@ jobs:
           export REPOSITORY=$(yq '.repository' config.yaml)
           export PACKAGE_NAME=$(yq '.package_name' config.yaml)
           export ARCHITECTURES=$(yq '.architectures | join(",")' config.yaml)
-          echo "repository=$REPOSITORY" >> $GITHUB_ENV
-          echo "package_name=$PACKAGE_NAME" >> $GITHUB_ENV
-          echo "architectures=$ARCHITECTURES" >> $GITHUB_ENV
+          echo "REPOSITORY=$REPOSITORY" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
+          echo "ARCHITECTURES=$ARCHITECTURES" >> $GITHUB_ENV
 
       # Debug step for confirmation
       - name: Debug Config Values
@@ -42,10 +42,8 @@ jobs:
       # Step 4: Clone the Package Repository
       - name: Clone Package Repository
         run: |
-          if [ -z "$REPOSITORY" ]; then
+          if [ -z "${{ env.REPOSITORY }}" ]; then
             echo "Error: Repository URL is not defined. Check your config.yaml file."
             exit 1
           fi
-          git clone $REPOSITORY ./package-src
-
-      # Remaining steps unchanged...
+          git clone "${{ env.REPOSITORY }}" ./package-src
