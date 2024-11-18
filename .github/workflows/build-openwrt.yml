@@ -33,10 +33,13 @@ jobs:
         sudo chmod +x yq_linux_amd64
         sudo mv yq_linux_amd64 /usr/local/bin/yq
 
-    # Step 4: Ensure .config directory exists and create .config from config.yaml
-    - name: Ensure .config exists and create from config.yaml
+    # Step 4: Ensure .config is a file and create from config.yaml
+    - name: Ensure .config is a file and create from config.yaml
       run: |
-        mkdir -p openwrt/.config
+        if [ -d "openwrt/.config" ]; then
+          rm -rf openwrt/.config
+        fi
+        touch openwrt/.config
         python3 scripts/generate_config_from_yaml.py /home/runner/work/owapp-compiler/owapp-compiler/config.yaml /home/runner/work/owapp-compiler/owapp-compiler/openwrt/.config
 
     # Step 5: Build the package
