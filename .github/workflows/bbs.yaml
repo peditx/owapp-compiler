@@ -68,12 +68,13 @@ jobs:
             echo "$IPK_FILES"
           fi
 
-          # Upload the files to GitHub
-          for FILE in $IPK_FILES
-          do
-            echo "Uploading $FILE"
-            curl -X POST -F "file=@$FILE" https://example.com/upload
-          done
+          # Zip the .ipk files into a single archive
+          ZIP_FILE="openwrt-ipks-${ARCH}.zip"
+          zip $ZIP_FILE $IPK_FILES
+
+          # Upload the zip file as artifact
+          echo "Uploading $ZIP_FILE"
+          curl -X POST -F "file=@$ZIP_FILE" https://example.com/upload
         done
 
     - name: Upload IPK files as artifacts
