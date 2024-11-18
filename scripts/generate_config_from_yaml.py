@@ -10,14 +10,6 @@ def generate_config(yaml_file, config_file):
         # نوشتن project_url
         f.write(f"CONFIG_project_url={data['project_url']}\n")
         
-        # نوشتن dependencies
-        for dep in data.get('dependencies', []):
-            f.write(f"CONFIG_dependencies_{dep}={dep}\n")
-        
-        # نوشتن other_config
-        for option in data.get('other_config', []):
-            f.write(f"CONFIG_other_config_{option}={option}\n")
-        
         # نوشتن معماری‌ها
         for arch in data.get('architectures', []):
             f.write(f"CONFIG_ARCH_{arch.upper()}={arch}\n")
