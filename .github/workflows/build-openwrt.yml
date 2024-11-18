@@ -15,7 +15,6 @@ jobs:
       uses: actions/checkout@v2
 
     # Step 2: Set up Python
-    - name: Set up Python 3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
@@ -30,39 +29,31 @@ jobs:
 
         # Install yq
         YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
-
-        # Check if the URL is correct
-        if [ -z "$YQ_URL" ]; then
-          echo "Error: yq download URL not found"
-          exit 1
-        fi
-
-        # Download yq and install it
         curl -LO "$YQ_URL"
         sudo chmod +x yq_linux_amd64
         sudo mv yq_linux_amd64 /usr/local/bin/yq
 
-    # Step 4: Create .config from config.yaml
-    - name: Create .config from config.yaml
+    # Step 4: Clone repository and prepare .config
+    - name: Clone repository and prepare .config
       run: |
-        mkdir -p openwrt
-        python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
+        REPO_URL=$(yq eval '.repository_url' ${GITHUB_WORKSPACE}/config.yaml)
+        git clone $REPO_URL openwrt
+        
+        # Prepare .config for each architecture
+        ARCHITECTURES=$(yq eval '.architectures' ${GITHUB_WORKSPACE}/config.yaml)
+        for ARCH in $(echo $ARCHITECTURES | jq -r '.[]'); do
+          echo "Building for architecture: $ARCH"
+          # Update .config with the selected architecture
+          echo "CONFIG_TARGET_$ARCH=y" >> openwrt/.config
+          
+          # Create the .config file based on config.yaml
+          python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
 
-    # Step 5: Build the package
-    - name: Build package
-      run: |
-        cd openwrt
-        # Ensure PACKAGE_NAME is set in config.yaml
-        PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
-
-        # Check if the package exists
-        if [ ! -d "package/${PACKAGE_NAME}" ]; then
-          echo "Error: Package ${PACKAGE_NAME} not found"
-          exit 1
-        fi
-
-        # Build the package
-        make package/${PACKAGE_NAME}/compile V=s
+          # Step 5: Build the package for this architecture
+          cd openwrt
+          make package/${PACKAGE_NAME}/compile V=s
+          cd ..
+        done
 
     # Step 6: Upload the generated ipk as artifact
     - name: Upload ipk as artifact
