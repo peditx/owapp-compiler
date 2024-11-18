@@ -27,37 +27,37 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install luci
 
-      # Step 3: Clone your custom repository and add the package
+      # Step 3: Clone custom repository and add the package
       - name: Clone custom repository and add package
         run: |
           cd openwrt
-          git clone https://github.com/peditx/luci-theme-peditx package/luci-theme-peditx
-          echo "Package added successfully"
+          # Loop over repositories in config.yaml and clone them dynamically
+          for repo in $(yq eval '.repositories[]' ${GITHUB_WORKSPACE}/config.yaml); do
+            git clone $repo package/$(basename $repo)
+          done
 
-      # Step 4: Ensure .config is created correctly
-      - name: Ensure .config exists and is correct
+      # Step 4: Generate .config from config.yaml dynamically
+      - name: Generate .config from config.yaml
         run: |
           cd openwrt
           if [ ! -f .config ]; then
-            make defconfig
+            echo "Creating .config from config.yaml"
+            python3 generate_config_from_yaml.py ${{ github.workspace }}/config.yaml .config
           fi
-          
-      # Step 5: Set OpenWrt configuration
-      - name: Set OpenWrt configuration
-        run: |
-          cd openwrt
-          # Make sure to replace the config file with the one from the repository
-          cp ${{ github.workspace }}/config.yaml .config
 
-      # Step 6: Build the package
+      # Step 5: Build packages dynamically from config.yaml
       - name: Build package
         run: |
           cd openwrt
-          make package/luci-theme-peditx/compile V=s
+          # Loop over package names in config.yaml and build them dynamically
+          for package in $(yq eval '.packages[]' ${GITHUB_WORKSPACE}/config.yaml); do
+            echo "Building $package..."
+            make package/$package/compile V=s
+          done
 
-      # Step 7: Upload the compiled package
+      # Step 6: Upload the compiled packages
       - name: Upload compiled package
         uses: actions/upload-artifact@v3
         with:
-          name: luci-theme-peditx.ipk
+          name: compiled-packages
           path: openwrt/bin/targets/*/*/packages/*.ipk
