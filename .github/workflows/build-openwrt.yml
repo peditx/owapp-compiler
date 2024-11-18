@@ -1,24 +1,21 @@
 name: Build app for OpenWrt
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # شروع دستی
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the code
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Step 2: Set up Python
     - name: Set up Python 3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
 
-    # Step 3: Install dependencies (yq, python packages)
     - name: Install dependencies
       run: |
         sudo apt update
@@ -28,41 +25,23 @@ jobs:
 
         # Install yq
         YQ_URL="https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64"
-
-        # Check if the URL is correct
-        if [ -z "$YQ_URL" ]; then
-          echo "Error: yq download URL not found"
-          exit 1
-        fi
-
-        # Download yq and install it
         curl -LO "$YQ_URL"
         sudo chmod +x yq_linux_amd64
         sudo mv yq_linux_amd64 /usr/local/bin/yq
 
-    # Step 4: Create .config from config.yaml
     - name: Create .config from config.yaml
       run: |
         mkdir -p openwrt
         python3 ${GITHUB_WORKSPACE}/scripts/generate_config_from_yaml.py ${GITHUB_WORKSPACE}/config.yaml ${GITHUB_WORKSPACE}/openwrt/.config
 
-    # Step 5: Build the package
-    - name: Build package for all architectures
+    - name: Build package
       run: |
         cd openwrt
-        # Loop through architectures
-        for ARCH in arm_cortex-a7_armv7_musleabihf mips_24kc x86_64; do
-          # Ensure PACKAGE_NAME is set in config.yaml
-          PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
-          echo "Building for architecture: $ARCH"
-          make package/${PACKAGE_NAME}/compile ARCH=$ARCH V=s
-        done
+        PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
+        make package/${PACKAGE_NAME}/compile V=s
 
-    # Step 6: Upload the generated ipk as artifact
     - name: Upload ipk as artifact
       uses: actions/upload-artifact@v3
       with:
         name: ipk-artifact
         path: openwrt/bin/packages/*/*.ipk
-        if-no-files-found: warn
-        include-hidden-files: false
