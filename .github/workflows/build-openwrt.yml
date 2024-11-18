@@ -40,7 +40,6 @@ jobs:
           cd openwrt
           cp ${{ github.workspace }}/config.yaml .config
           make defconfig
-          make menuconfig  # Open configuration menu to ensure all settings are correct
 
       # Step 5: Build the package
       - name: Build package
