@@ -6,7 +6,7 @@ on:
       project_url:
         description: 'URL of the OpenWrt theme repository'
         required: true
-        default: 'https://github.com/example/openwrt-theme'
+        default: 'https://github.com/peditx/luci-theme-peditx'
       architectures:
         description: 'Comma-separated list of architectures to build'
         required: true
@@ -29,17 +29,22 @@ jobs:
 
       - name: Clone OpenWrt repository
         run: |
-          git clone ${{ github.event.inputs.project_url }} openwrt-project
+          git clone https://github.com/openwrt/openwrt.git openwrt-project
           cd openwrt-project
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+
+      - name: Clone the theme repository
+        run: |
+          cd openwrt-project
+          git clone ${{ github.event.inputs.project_url }} package/luci-theme
 
       - name: Configure OpenWrt build
         run: |
           cd openwrt-project
           cp /home/runner/work/owapp-compiler/owapp-compiler/config.yaml .config
           make defconfig
-          make menuconfig # اینجا معماری‌ها باید انتخاب شوند
+          make menuconfig # معماری‌ها باید انتخاب شوند
 
       - name: Build OpenWrt for specified architectures
         run: |
