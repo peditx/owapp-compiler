@@ -52,12 +52,12 @@ jobs:
     - name: Build package for all architectures
       run: |
         cd openwrt
-        # Read the package name from the config.yaml
-        PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
-        # Get the architectures list from the config.yaml
-        ARCHITECTURES=$(yq eval '.architectures | join(" ")' ${GITHUB_WORKSPACE}/config.yaml)
-        for ARCH in $ARCHITECTURES; do
-          make package/${PACKAGE_NAME}/compile V=s ARCH=$ARCH
+        # Loop through architectures
+        for ARCH in arm_cortex-a7_armv7_musleabihf mips_24kc x86_64; do
+          # Ensure PACKAGE_NAME is set in config.yaml
+          PACKAGE_NAME=$(yq eval '.package_name' ${GITHUB_WORKSPACE}/config.yaml)
+          echo "Building for architecture: $ARCH"
+          make package/${PACKAGE_NAME}/compile ARCH=$ARCH V=s
         done
 
     # Step 6: Upload the generated ipk as artifact
@@ -65,6 +65,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ipk-artifact
-        path: $(find openwrt/bin/packages/ -name "*.ipk")
+        path: openwrt/bin/packages/*/*.ipk
         if-no-files-found: warn
         include-hidden-files: false
