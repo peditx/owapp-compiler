@@ -6,7 +6,7 @@ on:
       project_url:
         description: 'URL of the OpenWrt theme repository'
         required: true
-        default: 'https://github.com/peditx/luci-theme-peditx'
+        default: 'https://github.com/example/openwrt-theme'
       architectures:
         description: 'Comma-separated list of architectures to build'
         required: true
@@ -30,6 +30,11 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential gcc g++ python3 python3-pip python3-setuptools
         pip install pyyaml
+
+    - name: Ensure .config file exists
+      run: |
+        mkdir -p openwrt
+        touch openwrt/.config || echo ".config file already exists"
 
     - name: Generate OpenWrt config file
       run: |
