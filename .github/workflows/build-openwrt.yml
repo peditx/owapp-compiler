@@ -12,55 +12,58 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Install required tools
-      - name: Install Build Tools
+      # Step 2: Install Build Tools
+      - name: Install Required Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev \
-            gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip
+            gawk git gettext libssl-dev xsltproc wget unzip python3 python3-distutils zip \
+            yq
 
-      # Step 3: Read the .config file using a valid action
+      # Step 3: Read Config File and Extract Values
       - name: Read Config File
         id: config
-        uses: lannonbr/parse-yaml@v1
-        with:
-          yaml-file: .config
-          key-separator: .
+        run: |
+          export REPOSITORY=$(yq '.repository' .config)
+          export PACKAGE_NAME=$(yq '.package_name' .config)
+          export ARCHITECTURES=$(yq '.architectures | join(",")')
+          echo "repository=$REPOSITORY" >> $GITHUB_ENV
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_ENV
+          echo "architectures=$ARCHITECTURES" >> $GITHUB_ENV
 
-      # Step 4: Download and prepare OpenWrt SDK for each architecture
+      # Step 4: Download and Prepare OpenWrt SDK for each architecture
       - name: Download and Prepare OpenWrt SDK
         run: |
-          architectures="${{ steps.config.outputs.architectures }}"
           mkdir sdk-builds
-          for arch in ${architectures//,/ }; do
+          for arch in ${ARCHITECTURES//,/ }; do
             wget https://downloads.openwrt.org/releases/22.03.5/targets/generic/$arch/openwrt-sdk-22.03.5-$arch-generic.Linux-x86_64.tar.xz -O sdk-$arch.tar.xz
             tar -xf sdk-$arch.tar.xz -C sdk-builds
           done
 
-      # Step 5: Clone the package repository
+      # Step 5: Clone the Package Repository
       - name: Clone Package Repository
         run: |
-          git clone ${{ steps.config.outputs.repository }} ./package-src
+          git clone $REPOSITORY ./package-src
 
-      # Step 6: Copy the package to SDKs
+      # Step 6: Copy the Package to SDKs
       - name: Copy Package to SDKs
         run: |
           for sdk in sdk-builds/*; do
-            cp -r ./package-src $sdk/package/${{ steps.config.outputs.package_name }}
+            cp -r ./package-src $sdk/package/$PACKAGE_NAME
           done
 
-      # Step 7: Build the package for all architectures
+      # Step 7: Build the Package for all architectures
       - name: Build Package for All Architectures
         run: |
           for sdk in sdk-builds/*; do
             pushd $sdk
-            make menuconfig # You can replace this step with automated config commands
-            make package/${{ steps.config.outputs.package_name }}/compile V=s
+            make menuconfig # Customize this step as needed
+            make package/$PACKAGE_NAME/compile V=s
             popd
           done
 
-      # Step 8: Compress the built packages into a ZIP file
-      - name: Zip Built Packages
+      # Step 8: Compress Built Packages
+      - name: Compress Built Packages
         run: |
           mkdir output
           for sdk in sdk-builds/*; do
@@ -68,7 +71,7 @@ jobs:
           done
           zip -r openwrt-packages.zip output/
 
-      # Step 9: Upload the ZIP file as an artifact
+      # Step 9: Upload Package Artifacts
       - name: Upload Package Artifacts
         uses: actions/upload-artifact@v3
         with:
