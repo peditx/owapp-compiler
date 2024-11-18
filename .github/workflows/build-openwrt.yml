@@ -44,17 +44,31 @@ jobs:
         run: |
           git clone "${{ env.REPOSITORY }}" ./package-src
 
-      # Step 5: Build Package for Each Architecture
+      # Step 5: Setup OpenWrt Build Environment
+      - name: Setup OpenWrt Build Environment
+        run: |
+          # Clone OpenWrt source
+          git clone https://github.com/openwrt/openwrt.git
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+          # Add the package to OpenWrt
+          ln -s ../package-src luci-theme-peditx
+          
+          # Run make menuconfig to select the package
+          make menuconfig
+
+      # Step 6: Build Packages
       - name: Build Packages
         run: |
-          mkdir -p openwrt
           cd openwrt
           for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
             echo "Building for $ARCH..."
             make target=$ARCH
           done
 
-      # Step 6: Create Zip File with .ipk Packages
+      # Step 7: Create Zip File with IPK Files
       - name: Create Zip File with IPK Files
         run: |
           mkdir -p build_outputs
@@ -65,7 +79,7 @@ jobs:
           done
           zip -r package_builds.zip build_outputs
 
-      # Step 7: Upload Artifact
+      # Step 8: Upload Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
