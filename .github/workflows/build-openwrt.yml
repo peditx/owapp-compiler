@@ -42,8 +42,33 @@ jobs:
       # Step 4: Clone the Package Repository
       - name: Clone Package Repository
         run: |
-          if [ -z "${{ env.REPOSITORY }}" ]; then
-            echo "Error: Repository URL is not defined. Check your config.yaml file."
-            exit 1
-          fi
           git clone "${{ env.REPOSITORY }}" ./package-src
+
+      # Step 5: Build Package for Each Architecture
+      - name: Build Packages
+        run: |
+          mkdir -p openwrt
+          cd openwrt
+          for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
+            # Simulate build process
+            echo "Building for $ARCH..."
+            mkdir -p bin/targets/$ARCH
+            echo "Package for $ARCH" > bin/targets/$ARCH/output.txt
+          done
+
+      # Step 6: Create Zip File for All Architectures
+      - name: Create Zip File for All Architectures
+        run: |
+          mkdir -p build_outputs
+          for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
+            mkdir -p build_outputs/$ARCH
+            cp -r ./openwrt/bin/targets/$ARCH/* build_outputs/$ARCH/
+          done
+          zip -r package_builds.zip build_outputs
+
+      # Step 7: Upload Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: OpenWrt-Packages
+          path: package_builds.zip
