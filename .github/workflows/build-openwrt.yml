@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Install Build Tools
+      # Step 2: Install Required Tools
       - name: Install Required Tools
         run: |
           sudo apt-get update
@@ -24,9 +24,9 @@ jobs:
       - name: Read Config File
         id: config
         run: |
-          export REPOSITORY=$(yq '.repository' .config)
-          export PACKAGE_NAME=$(yq '.package_name' .config)
-          export ARCHITECTURES=$(yq '.architectures | join(",")')
+          export REPOSITORY=$(yq '.repository' config.yaml)
+          export PACKAGE_NAME=$(yq '.package_name' config.yaml)
+          export ARCHITECTURES=$(yq '.architectures | join(",")' config.yaml)
           echo "repository=$REPOSITORY" >> $GITHUB_ENV
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_ENV
           echo "architectures=$ARCHITECTURES" >> $GITHUB_ENV
