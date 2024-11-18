@@ -1,4 +1,4 @@
-repository_url: "https://github.com/peditx/luci-theme-peditx"
+project_url: "https://github.com/peditx/luci-theme-peditx"
 architectures:
   - "armv6"
   - "armv7"
