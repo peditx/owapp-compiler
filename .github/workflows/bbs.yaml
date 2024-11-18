@@ -39,12 +39,20 @@ jobs:
           cd openwrt-project
           git clone ${{ github.event.inputs.project_url }} package/luci-theme
 
+      - name: Add theme to feeds
+        run: |
+          cd openwrt-project
+          echo "src-git luci-theme-peditx ${{ github.event.inputs.project_url }}" >> feeds.conf.default
+          ./scripts/feeds update luci-theme-peditx
+          ./scripts/feeds install luci-theme-peditx
+
       - name: Configure OpenWrt build
         run: |
           cd openwrt-project
-          cp /home/runner/work/owapp-compiler/owapp-compiler/config.yaml .config
+          # اجرای defconfig برای تولید فایل .config استاندارد
           make defconfig
-          make menuconfig # معماری‌ها باید انتخاب شوند
+          # اگر نیاز به دستکاری .config دارید، از make menuconfig استفاده کنید:
+          # make menuconfig
 
       - name: Build OpenWrt for specified architectures
         run: |
