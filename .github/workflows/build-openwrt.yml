@@ -50,19 +50,18 @@ jobs:
           mkdir -p openwrt
           cd openwrt
           for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
-            # Simulate build process
             echo "Building for $ARCH..."
-            mkdir -p bin/targets/$ARCH
-            echo "Package for $ARCH" > bin/targets/$ARCH/output.txt
+            make target=$ARCH
           done
 
-      # Step 6: Create Zip File for All Architectures
-      - name: Create Zip File for All Architectures
+      # Step 6: Create Zip File with .ipk Packages
+      - name: Create Zip File with IPK Files
         run: |
           mkdir -p build_outputs
           for ARCH in $(echo "${{ env.ARCHITECTURES }}" | tr ',' ' '); do
             mkdir -p build_outputs/$ARCH
-            cp -r ./openwrt/bin/targets/$ARCH/* build_outputs/$ARCH/
+            # Copy the .ipk files generated during the build
+            cp ./openwrt/bin/packages/*/$ARCH/*.ipk build_outputs/$ARCH/
           done
           zip -r package_builds.zip build_outputs
 
