@@ -3,10 +3,10 @@ name: Build OpenWrt Package
 on:
   workflow_dispatch:
     inputs:
-      project_url:
-        description: 'URL of the OpenWrt theme repository'
+      theme_url:
+        description: 'URL of the OpenWrt theme file to clone'
         required: true
-        default: 'https://github.com/example/openwrt-theme'
+        default: 'https://github.com/example/openwrt-theme.git'
       architectures:
         description: 'Comma-separated list of architectures to build'
         required: true
@@ -34,17 +34,21 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Add custom theme repository
+      - name: Clone theme repository
         run: |
           cd openwrt-project
-          echo "src-git luci-theme ${{ github.event.inputs.project_url }}" >> feeds.conf.default
-          ./scripts/feeds update luci-theme
-          ./scripts/feeds install luci-theme
+          git clone ${{ github.event.inputs.theme_url }} package/luci-theme-peditx
+
+      - name: Configure OpenWrt build
+        run: |
+          cd openwrt-project
+          make defconfig
+          # Add theme package to OpenWrt build system
+          echo "CONFIG_PACKAGE_luci-theme-peditx=y" >> .config
 
       - name: Build OpenWrt for specified architectures
         run: |
           cd openwrt-project
-          make defconfig
           IFS=',' read -r -a ARCH_ARRAY <<< "${{ github.event.inputs.architectures }}"
           for ARCH in "${ARCH_ARRAY[@]}"; do
             make -j$(nproc) V=s
