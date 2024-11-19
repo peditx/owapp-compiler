@@ -45,7 +45,7 @@ jobs:
           cd sdk
           ./scripts/feeds install luci-theme-peditx
            make defconfig
-           make package/luci-theme-peditx/compile -j$(nproc)
+           make package/luci-theme-peditx/compile -j1
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
