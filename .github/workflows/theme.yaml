@@ -38,12 +38,14 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           echo "CONFIG_PACKAGE_luci-theme-peditx=m" >> .config
-          make defconfig
+          
 
       - name: Build Theme
         run: |
           cd sdk
-          make package/luci-theme-peditx/compile -j$(nproc)
+          ./scripts/feeds install luci-theme-peditx
+           make defconfig
+           make package/luci-theme-peditx/compile -j$(nproc)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
