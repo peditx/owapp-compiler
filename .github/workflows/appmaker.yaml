@@ -1,4 +1,4 @@
-name: "Build OpenWrt Package | OpenWrt SDK"
+name: "Build Package | OpenWrt SDK"
 
 on:
   workflow_dispatch:
@@ -29,37 +29,27 @@ jobs:
 
       - name: Clone Package Repository
         run: |
-          # Extract the project name from the URL
           repo_url="${{ github.event.inputs.repo_url }}"
-          project_name=$(basename "$repo_url" .git)
-          echo "Project name: $project_name"
-          
-          # Clone the repository using the extracted name
-          git clone "$repo_url" "$project_name"
-          cp -r "$project_name" sdk/package/
+          project_name=$(basename -s .git "$repo_url")
+          git clone "$repo_url" "sdk/package/$project_name"
 
-      - name: Configure SDK
+      - name: Configure and Build SDK
         run: |
           cd sdk
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-
-          # Check if package exists in feeds
-          if ./scripts/feeds list | grep -q "^${project_name} "; then
-            ./scripts/feeds install ${project_name}
-          fi
-
-          echo "CONFIG_PACKAGE_${project_name}=m" >> .config
           make defconfig
+          make package/feeds/luci/compile -j$(nproc) V=s
+          echo "Build completed successfully."
 
-      - name: Build Package
+      - name: Compile Package
         run: |
           cd sdk
-          make package/${project_name}/compile -j1 V=sc
+          make package/$project_name/compile -j$(nproc) V=s
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: built-packages
           path: |
-            sdk/bin/packages/**/${project_name}*.ipk
+            sdk/bin/packages/**/${{ github.event.inputs.repo_url | split: '/' | last | split: '.git' | first }}*.ipk
