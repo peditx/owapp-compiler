@@ -6,7 +6,7 @@ on:
       repo_url:
         description: 'Enter the GitHub repository URL of the theme'
         required: true
-        default: 'https://github.com/example/luci-theme-peditx'
+        default: 'https://github.com/peditx/luci-theme-peditx'
 
 jobs:
   build-theme:
